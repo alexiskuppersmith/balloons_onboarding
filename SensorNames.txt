@@ -1,3 +1,7 @@
+//Sample documentation 
+https://learn.adafruit.com/adafruit-bmp280-barometric-pressure-plus-temperature-sensor-breakout/pinouts
+
+
 Sensors ?
 BMP 280
 Temperature, Altitude, Pressure
