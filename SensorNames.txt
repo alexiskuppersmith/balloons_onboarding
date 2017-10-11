@@ -1,0 +1,17 @@
+Sensors ?
+BMP 280
+Temperature, Altitude, Pressure
+
+BNO 055
+Orientation
+
+Ultimate GPS Breakout v3 ?
+GPS
+
+
+5V Micro SD breakout board+ ?
+SD Card stuff
+
+
+Max 31855 
+Temperature
