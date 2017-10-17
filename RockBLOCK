@@ -1,0 +1,53 @@
+#include "IridiumSBD.h"
+#include "SoftwareSerial.h"
+
+IriduimSBD(Stream &stream, int sleepPinNo = -1); 
+SoftwareSerial ssIridium(18, 19); 
+IridiumSBD isbd(ssIridium, 10); 
+
+void setup()
+{
+  isbd.setPowerProfile(1); 
+  isbd.begin(); 
+}
+
+
+// Send a text message
+int sendSBDText(const char *message);
+
+// Send a binary message
+int sendSBDBinary(const uint8_t *txData, size_t txDataSize);
+
+// Send a text message and receive one (if available)
+int sendReceiveSBDText(const char *message, uint8_t *rxBuffer, 
+size_t &rxBufferSize);
+
+// Send a binary message and receive one (if available)
+int sendReceiveSBDBinary(const uint8_t *txData, size_t txDataSize, 
+uint8_t *rxBuffer, size_t &rxBufferSize);
+
+//diagnostics 
+void attachConsole(Stream &stream);
+void attachDiags(Stream &stream);
+
+//
+isbd.attachConsole(Serial);
+isbd.attachDiags(Serial);
+
+do
+{
+   char rxBuffer[100];
+   size_t bufferSize = sizeof(rxBuffer);
+   int status = isbd.sendReceiveText("Is anyone home?”,
+      rxBuffer, bufferSize);
+   if (status != ISBD_SUCCESS)
+   {
+      /* ...process error here... */
+      break;
+   }
+   if (bufferSize == 0)
+      break; // all done!
+   /* ...process message in rxBuffer here... */
+} while (isbd.getWaitingMessageCount() > 0);
+
+
