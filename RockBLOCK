@@ -1,53 +1,109 @@
-#include "IridiumSBD.h"
-#include "SoftwareSerial.h"
+#include <IridiumSBD.h>
 
-IriduimSBD(Stream &stream, int sleepPinNo = -1); 
-SoftwareSerial ssIridium(18, 19); 
-IridiumSBD isbd(ssIridium, 10); 
+/*
+ * BasicSend
+ * 
+ * This sketch sends a "Hello, world!" message from the satellite modem.
+ * If you have activated your account and have credits, this message
+ * should arrive at the endpoints you have configured (email address or
+ * HTTP POST).
+ * 
+ * Assumptions
+ * 
+ * The sketch assumes an Arduino Mega or other Arduino-like device with
+ * multiple HardwareSerial ports.  It assumes the satellite modem is
+ * connected to Serial3.  Change this as needed.  SoftwareSerial on an Uno
+ * works fine as well.
+ */
+
+#define IridiumSerial Serial1 //Changed to Serial Port 1
+#define DIAGNOSTICS false // Change this to see diagnostics
+
+// Declare the IridiumSBD object
+IridiumSBD modem(IridiumSerial); //passing IridiumSerial as object
 
 void setup()
 {
-  isbd.setPowerProfile(1); 
-  isbd.begin(); 
+  int signalQuality = -1; //error thing
+  int err; //another error thing
+  
+  // Start the console serial port
+  Serial.begin(115200); //can get more bits per second than 9600
+  while (!Serial); //waiting for serial to turn on
+
+  // Start the serial port connected to the satellite modem
+  IridiumSerial.begin(19200); //start the rockblock modem using a baud rate of 19200
+
+  // Begin satellite modem operation
+  Serial.println("Starting modem..."); //if it fails to start, we do some print stuff 
+  err = modem.begin(); 
+  if (err != ISBD_SUCCESS)
+  {
+    Serial.print("Begin failed: error ");
+    Serial.println(err);
+    if (err == ISBD_NO_MODEM_DETECTED)
+      Serial.println("No modem detected: check wiring.");
+    return;
+  }
+
+  // Example: Print the firmware revision
+  char version[12];
+  err = modem.getFirmwareVersion(version, sizeof(version));
+  if (err != ISBD_SUCCESS)
+  {
+     Serial.print("FirmwareVersion failed: error ");
+     Serial.println(err);
+     return;
+  }
+  Serial.print("Firmware Version is ");
+  Serial.print(version);
+  Serial.println(".");
+
+  // Example: Test the signal quality.
+  // This returns a number between 0 and 5.
+  // 2 or better is preferred.
+  err = modem.getSignalQuality(signalQuality);
+  if (err != ISBD_SUCCESS)
+  {
+    Serial.print("SignalQuality failed: error ");
+    Serial.println(err);
+    return;
+  }
+
+  Serial.print("On a scale of 0 to 5, signal quality is currently ");
+  Serial.print(signalQuality);
+  Serial.println(".");
+
+  // Send the message
+  Serial.print("Trying to send the message.  This might take several minutes.\r\n");
+  err = modem.sendSBDText("Hello, world!");
+  if (err != ISBD_SUCCESS)
+  {
+    Serial.print("sendSBDText failed: error ");
+    Serial.println(err);
+    if (err == ISBD_SENDRECEIVE_TIMEOUT)
+      Serial.println("Try again with a better view of the sky.");
+  }
+
+  else
+  {
+    Serial.println("Hey, it worked!");
+  }
 }
 
-
-// Send a text message
-int sendSBDText(const char *message);
-
-// Send a binary message
-int sendSBDBinary(const uint8_t *txData, size_t txDataSize);
-
-// Send a text message and receive one (if available)
-int sendReceiveSBDText(const char *message, uint8_t *rxBuffer, 
-size_t &rxBufferSize);
-
-// Send a binary message and receive one (if available)
-int sendReceiveSBDBinary(const uint8_t *txData, size_t txDataSize, 
-uint8_t *rxBuffer, size_t &rxBufferSize);
-
-//diagnostics 
-void attachConsole(Stream &stream);
-void attachDiags(Stream &stream);
-
-//
-isbd.attachConsole(Serial);
-isbd.attachDiags(Serial);
-
-do
+void loop()
 {
-   char rxBuffer[100];
-   size_t bufferSize = sizeof(rxBuffer);
-   int status = isbd.sendReceiveText("Is anyone home?”,
-      rxBuffer, bufferSize);
-   if (status != ISBD_SUCCESS)
-   {
-      /* ...process error here... */
-      break;
-   }
-   if (bufferSize == 0)
-      break; // all done!
-   /* ...process message in rxBuffer here... */
-} while (isbd.getWaitingMessageCount() > 0);
+}
 
+#if DIAGNOSTICS
+void ISBDConsoleCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+
+void ISBDDiagsCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+#endif
 
