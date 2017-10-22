@@ -5,3 +5,6 @@ Vin to 5V, GND to GND
 SDA to pin 18
 SCL to pin 19
 
+SD Card
+5V to 5V, GND to GND
+CLK to pin 10
