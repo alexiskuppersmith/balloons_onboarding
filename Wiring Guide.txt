@@ -8,6 +8,15 @@ SCL to pin 19
 SD Card
 5V to 5V, GND to GND
 CLK to pin 13
+<<<<<<< HEAD
 DO 12
 DI 11
 CS GND
+=======
+
+Max31588
+DO - 3
+CS - 4
+CLK - 5
+
+>>>>>>> b0f096aac2c6e7988e3f6e325a9fe821dccdc350
