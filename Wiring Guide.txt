@@ -9,3 +9,8 @@ SD Card
 5V to 5V, GND to GND
 CLK to pin 13
 
+Max31588
+DO - 3
+CS - 4
+CLK - 5
+
