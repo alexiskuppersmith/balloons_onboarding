@@ -1,7 +1,11 @@
+#include <SD.h>
+#include <SD_t3.h>
 #include <Wire.h>
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
-  
+
+
+File flightLog;
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
 void setup(void) 
