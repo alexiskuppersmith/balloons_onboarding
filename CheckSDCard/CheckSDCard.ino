@@ -4,14 +4,14 @@
  This example shows how use the utility libraries on which the'
  SD library is based in order to get info about your SD card.
  Very useful for testing a card when you're not sure whether its working or not.
- 	
+   
  The circuit:
   * SD card attached to SPI bus as follows:
  ** MOSI - pin 11 on Arduino Uno/Duemilanove/Diecimila, pin 7 on Teensy with audio board
  ** MISO - pin 12 on Arduino Uno/Duemilanove/Diecimila
  ** CLK - pin 13 on Arduino Uno/Duemilanove/Diecimila, pin 14 on Teensy with audio board
  ** CS - depends on your SD card shield or module - pin 10 on Teensy with audio board
- 		Pin 4 used here for consistency with other Arduino examples
+    Pin 4 used here for consistency with other Arduino examples
 
  
  created  28 Mar 2011
