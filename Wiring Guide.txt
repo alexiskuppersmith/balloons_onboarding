@@ -7,4 +7,5 @@ SCL to pin 19
 
 SD Card
 5V to 5V, GND to GND
-CLK to pin 10
+CLK to pin 13
+
