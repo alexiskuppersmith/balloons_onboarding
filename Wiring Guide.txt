@@ -10,7 +10,7 @@ SD Card
 CLK to pin 13
 DO to pin 12
 DI to pin 11
-CS to GND ????
+CS to pin 10
 
 Max31588
 DO - 3
