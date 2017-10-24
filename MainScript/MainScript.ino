@@ -11,6 +11,9 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55);
 void setup(void) 
 {
   Serial.begin(9600);
+
+  /* Initialize SD Card */
+  Serial.print("Initializing SD card...");
   
   //Initialize BNO Orientation sensor
   if(!bno.begin())
