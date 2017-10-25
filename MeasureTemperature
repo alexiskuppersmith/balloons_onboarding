@@ -51,6 +51,10 @@ void loop() {
 
     Serial.print(F("Approx altitude = "));
     Serial.print(bmp.readAltitude(1013.25)); // this should be adjusted to your local forcase
+    if(bmp.readAltitude(1013.25) == 4641)
+    {
+      //cut down the balloon 
+    }
     Serial.println(" m");
     
     Serial.println();
