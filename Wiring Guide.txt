@@ -16,3 +16,21 @@ Max31588
 DO - 3
 CS - 4
 CLK - 5
+
+Ultimate GPS Breakout v3
+Vin to 5V, GND to GND
+RX to pin 6
+TX to pin 7
+
+BMP280
+Vin to 5V, GND to GND
+SCK to pin 13
+SDO to pin 12
+SDI to pin 11
+CS to pin 10
+
+RockBLOCK
+5v In to 5V, GND to GND
+RXD to pin 0
+TXD to pin 1
+OnOff to pin 7 (?)
