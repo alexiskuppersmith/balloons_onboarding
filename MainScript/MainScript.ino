@@ -1,8 +1,7 @@
 #include <Adafruit_BMP280.h>
-
 #include <IridiumSBD.h>
 //#include <SD.h>
-#include <string>
+#include <String>
 #include <SD_t3.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
@@ -79,7 +78,7 @@ void setup(void)
   while (!Serial); //waiting for serial to turn on
   
   if (!bmp.begin()) {  
-    Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+    Serial.println("Could not find a valid BMP280 sensor, check wiring!");
     while (1);
   }
   
@@ -145,11 +144,14 @@ void setup(void)
 
 void loop(void) 
 {
-  string logString;
+  String logString;
   
   double altitude = getAltitude();
   logString += getTempAndPressure() + ", " +  externalTemperature() + ", " + altitude + ", " + getOrientationString() + ", " +  getLatLong();
-  
+ /* for(int x = 0; x <logString.length(); x++)
+  {
+    
+  }*/
   //TODO: log the logString to SD card
   
   //cut balloon
@@ -162,10 +164,11 @@ void loop(void)
     }
   }
   // Example: Print the firmware revision
-  
-  err = modem.sendSBDText(logString); //this is where we should print the final string
+    
+ //  const char* message = &logString;
+    modem.sendSBDText(logString.c_str()); //this is where we should print the final string
 
-  if (err != ISBD_SUCCESS)
+  /*if (err != ISBD_SUCCESS)
   {
     Serial.print("sendSBDText failed: error ");
     Serial.println(err);
@@ -176,16 +179,16 @@ void loop(void)
   else
   {
     Serial.println( "Hey it worked"); 
-  }
+  }*/
 
   
   delay(5000);
 }
 
 //returns a string in the form "temp, pressure"
-string getTempAndPressure(){
-  //return F("Temperature = " + bmp.readTemperature() + " *C\nPressure = " + read.Pressure() + " Pa\n");
-  return F(string(bmp.readTemperature()) + " *C, " + read.Pressure() + " Pa");
+String getTempAndPressure(){
+  //return F("Temperature = " + bmp.readTemperature() + " *C\nPressure = " + readPressure() + " Pa\n");
+  return String(bmp.readTemperature()) + " *C, " + readPressure() + " Pa";
 }
 
 //returns altitude as a double
@@ -199,10 +202,10 @@ void logToSD() {
 //=============BNO 055======================
 
 //Returns a string in the form "X, Y, Z"
-string getOrientationString() {
+String getOrientationString() {
   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
   
-  return string(euler.x()) + ", " + euler.y() + ", " + euler.z();
+  return String(euler.x()) + ", " + euler.y() + ", " + euler.z();
 }
 
 //=============GPS======================
@@ -233,9 +236,106 @@ void setupGPS()
 }
 
 //Returns a string in the form lat, long
-string getLatLong()
+String getLatLong()
 {
-  string location;
+  String location;
+  if (gps.location.isValid())
+  {
+    location += String(gps.location.lat()) + ", " + String(gps.location.lng());
+    return location
+  }
+  else
+  {
+    return "INVALID LOCATION";
+  }
+}
+
+void printIncomingMessages()
+{
+  if (modem.getWaitingMessageCount() > 0)
+  {
+    Serial.println("Waiting messages available.  Let's try to read them.");
+    uint8_t buffer[200];
+    size_t bufferSize = sizeof(buffer);
+    err = modem.sendReceiveSBDText(NULL, buffer, bufferSize);
+    if (err != ISBD_SUCCESS)
+    {
+      Serial.print("sendReceiveSBDBinary failed: error ");
+      Serial.println(err);
+      return;
+    }
+
+    Serial.println("Message received!");
+    Serial.print("Inbound message size is ");
+    Serial.println(bufferSize);
+    for (int i=0; i<(int)bufferSize; ++i)
+    {
+      Serial.print(buffer[i], HEX);
+      if (isprint(buffer[i]))
+      {
+        Serial.print("(");
+        Serial.write(buffer[i]);
+        Serial.print(")");
+      }
+      Serial.print(" ");
+    }
+    Serial.println();
+    Serial.print("Messages remaining to be retrieved: ");
+    Serial.println(modem.getWaitingMessageCount());
+  }
+}
+
+
+void sendUBX(uint8_t* MSG, uint8_t len) {
+  for(int i = 0; i < len; i++) {
+    Serial1.write(MSG[i]);
+    Serial.print(MSG[i], HEX);
+  }
+  Serial1.println();
+}
+
+//#if DIAGNOSTICS
+void ISBDConsoleCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+
+void ISBDDiagsCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+
+String externalTemperature() 
+{
+   String externalTemperatureString = "External Temperature = " + String(thermocouple.readCelsius()) +"C";
+   double c = thermocouple.readCelsius();
+   if (isnan(c)) {
+     Serial.println("Something wrong with thermocouple!");
+   } else {
+     Serial.print("C = "); 
+     Serial.println(c);
+   }
+   //Serial.print("F = ");
+   //Serial.println(thermocouple.readFarenheit());
+  return externalTemperatureString; 
+   delay(1000);
+  
+}
+//#endifsion());
+  Serial.println();
+
+  while (*gpsStream)
+    if (gps.encode(*gpsStream++))
+      displayInfo();
+
+  Serial.println();
+  Serial.println(F("Done."));
+}
+
+//Returns a string in thhe form lat, long
+String getLatLong()
+{
+  String location;
   if (gps.location.isValid())
   {
     location += gps.location.lat() + ", " + gps.location.lng();
@@ -302,9 +402,9 @@ void ISBDDiagsCallback(IridiumSBD *device, char c)
   Serial.write(c);
 }
 
-string externalTemperature() 
+String externalTemperature() 
 {
-   string externalTemperatureString = "External Temperature = " + thermocouple.readInternal();
+   String externalTemperatureString = "External Temperature = " + String(thermocouple.readInternal());
    double c = thermocouple.readCelsius();
    if (isnan(c)) {
      Serial.println("Something wrong with thermocouple!");
