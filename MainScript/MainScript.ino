@@ -235,7 +235,7 @@ void setupGPS()
 String getLatLong()
 {
   String location;
-  if (gps.location.isValid())
+ if (gps.location.isValid())
   {
     location += "Location: " + String(gps.location.lat()) + ", " + String(gps.location.lng());
     return location;
