@@ -114,9 +114,10 @@ void loop()
 {
   Serial.println("IN THE LOOP"); 
   String logString;
-  
+  gps.encode(*gpsStream++);
+  String gpsInfo =  displayInfo(); //make this into a string arument 
   double altitude = getAltitude();
-  logString += getTempAndPressure() + ", " +  externalTemperature() + ", " + "Altitude: " + altitude + ", " + "Orientation: " + getOrientationString() + ", " +  getLatLong();
+  logString += getTempAndPressure() + ", " +  externalTemperature() + ", " + "Altitude: " + altitude + ", " + "Orientation: " + getOrientationString() + ", " +  getLatLong() + gpsInfo;
 
   //TODO: log the logString to SD card
   
@@ -160,28 +161,27 @@ String getOrientationString() {
 //=============GPS======================
 
 //sets up the GPS, brah
-void displayInfo()
+String displayInfo()
 {
-  Serial.print(F("Location: ")); 
+  String gpsString; 
+  gpsString += "Location: "; 
   if (gps.location.isValid())
   {
-    Serial.print(gps.location.lat(), 6);
-    Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
+    gpsString += String(gps.location.lat());
+    gpsString += ",";
+    gpsString += String(gps.location.lng()) + " ";
   }
   else
   {
     Serial.print(F("INVALID"));
   }
 
-  Serial.print(F("  Date/Time: "));
+  gpsString += "Date/Time: ";
   if (gps.date.isValid())
   {
-    Serial.print(gps.date.month());
-    Serial.print(F("/"));
-    Serial.print(gps.date.day());
-    Serial.print(F("/"));
-    Serial.print(gps.date.year());
+    gpsString += String(gps.date.month()) +"/";
+    gpsString += String(gps.date.day()) + "/";
+    gpsString += String(gps.date.year()) + " ";
   }
   else
   {
@@ -192,16 +192,16 @@ void displayInfo()
   if (gps.time.isValid())
   {
     if (gps.time.hour() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.hour());
-    Serial.print(F(":"));
+    gpsString += String(gps.time.hour());
+    gpsString += (":");
     if (gps.time.minute() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.minute());
-    Serial.print(F(":"));
+    gpsString += String(gps.time.minute());
+    gpsString += ":";
     if (gps.time.second() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.second());
-    Serial.print(F("."));
+    gpsString += String(gps.time.second());
+    gpsString += ".";
     if (gps.time.centisecond() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.centisecond());
+    gpsString += String(gps.time.centisecond());
   }
   else
   {
@@ -209,6 +209,7 @@ void displayInfo()
   }
 
   Serial.println();
+  return gpsString; 
 }
 void setupGPS()
 {
@@ -225,10 +226,6 @@ void setupGPS()
 
   Serial.println(TinyGPSPlus::libraryVersion());
   Serial.println();
-
-  while (*gpsStream)
-    if (gps.encode(*gpsStream++))
-      displayInfo();
 
   Serial.println();
   Serial.println(F("Done."));
