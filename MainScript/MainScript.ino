@@ -1,6 +1,6 @@
 #include <Adafruit_BMP280.h>
 #include <IridiumSBD.h>
-//#include <SD.h>
+#include <SD.h>
 #include <String>
 #include <SD_t3.h>
 #include <Adafruit_Sensor.h>
@@ -41,7 +41,7 @@ void setupGPS();
 
 // Declare the IridiumSBD object
 IridiumSBD modem(IridiumSerial); //passing IridiumSerial as object
-
+int heaterControlPin = 23;
 // initialize the Thermocouple
 Adafruit_MAX31855 thermocouple(MAXCLK, MAXCS, MAXDO);
 
@@ -72,6 +72,8 @@ byte gps_set_success = 0;
 
 void setup(void) 
 {
+ 
+  pinMode(heaterControlPin, OUTPUT);
   pinMode(fadePin, OUTPUT);
   
   Serial.begin(115200); //for rockblock, can get more bits per second than 9600
@@ -102,22 +104,38 @@ void setup(void)
   // Begin satellite modem operation
   Serial.println("Starting modem..."); //if it fails to start, we do some print stuff 
   modem.begin();  
+  Serial.println("After modem.begin()");
   modem.getSignalQuality(signalQuality);
+  Serial.println("After getSignalQuality"); 
 
   Serial.print("On a scale of 0 to 5, signal quality is currently ");
   Serial.print(signalQuality);
   Serial.println(".");
+  File dataFile; 
 }
 
 
 void loop() 
 {
+  dataFile = SD.open("datalog.txt", FILE_WRITE);
+  Serial.println("Temp = 10C...");
+  manageHeaters(10);
+  delay(5000);
+  Serial.println("Temp = 0C...");
+  manageHeaters(0);
+  delay(5000);
+  Serial.println("Temp = -5C...");
+  manageHeaters(-5);
+  delay(5000);
+  Serial.println("Temp = -15C...");
+  manageHeaters(-15);
+  delay(5000);
   Serial.println("IN THE LOOP"); 
   String logString;
   gps.encode(*gpsStream++);
-  String gpsInfo =  displayInfo(); //make this into a string arument 
+  
   double altitude = getAltitude();
-  logString += getTempAndPressure() + ", " +  externalTemperature() + ", " + "Altitude: " + altitude + ", " + "Orientation: " + getOrientationString() + ", " +  getLatLong() + gpsInfo;
+  logString += getTempAndPressure() + ", " +  externalTemperature() + ", " + "Altitude: " + altitude + ", " + "Orientation: " + getOrientationString() + ", " + "GPS " + getLatLong();
 
   //TODO: log the logString to SD card
   
@@ -131,9 +149,14 @@ void loop()
     }
   }
   // Example: Print the firmware revision
-
+  Serial.println("Should print things"); 
+  printIncomingMessages(); 
   Serial.println(logString); 
   modem.sendSBDText(logString.c_str()); //this is where we should print the final string
+     if (dataFile) {
+    dataFile.println(logString);
+    dataFile.close();
+  } 
   delay(5000);
 }
 
@@ -148,6 +171,7 @@ double getAltitude(){
 }
 
 void logToSD() {
+
 }
 
 //=============BNO 055======================
@@ -161,27 +185,28 @@ String getOrientationString() {
 //=============GPS======================
 
 //sets up the GPS, brah
-String displayInfo()
+void displayInfo()
 {
-  String gpsString; 
-  gpsString += "Location: "; 
+  Serial.print(F("Location: ")); 
   if (gps.location.isValid())
   {
-    gpsString += String(gps.location.lat());
-    gpsString += ",";
-    gpsString += String(gps.location.lng()) + " ";
+    Serial.print(gps.location.lat(), 6);
+    Serial.print(F(","));
+    Serial.print(gps.location.lng(), 6);
   }
   else
   {
     Serial.print(F("INVALID"));
   }
 
-  gpsString += "Date/Time: ";
+  Serial.print(F("  Date/Time: "));
   if (gps.date.isValid())
   {
-    gpsString += String(gps.date.month()) +"/";
-    gpsString += String(gps.date.day()) + "/";
-    gpsString += String(gps.date.year()) + " ";
+    Serial.print(gps.date.month());
+    Serial.print(F("/"));
+    Serial.print(gps.date.day());
+    Serial.print(F("/"));
+    Serial.print(gps.date.year());
   }
   else
   {
@@ -192,16 +217,16 @@ String displayInfo()
   if (gps.time.isValid())
   {
     if (gps.time.hour() < 10) Serial.print(F("0"));
-    gpsString += String(gps.time.hour());
-    gpsString += (":");
+    Serial.print(gps.time.hour());
+    Serial.print(F(":"));
     if (gps.time.minute() < 10) Serial.print(F("0"));
-    gpsString += String(gps.time.minute());
-    gpsString += ":";
+    Serial.print(gps.time.minute());
+    Serial.print(F(":"));
     if (gps.time.second() < 10) Serial.print(F("0"));
-    gpsString += String(gps.time.second());
-    gpsString += ".";
+    Serial.print(gps.time.second());
+    Serial.print(F("."));
     if (gps.time.centisecond() < 10) Serial.print(F("0"));
-    gpsString += String(gps.time.centisecond());
+    Serial.print(gps.time.centisecond());
   }
   else
   {
@@ -209,7 +234,6 @@ String displayInfo()
   }
 
   Serial.println();
-  return gpsString; 
 }
 void setupGPS()
 {
@@ -226,6 +250,10 @@ void setupGPS()
 
   Serial.println(TinyGPSPlus::libraryVersion());
   Serial.println();
+  
+  while (*gpsStream)
+    if (gps.encode(*gpsStream++))
+      displayInfo();
 
   Serial.println();
   Serial.println(F("Done."));
@@ -248,6 +276,7 @@ String getLatLong()
 
 void printIncomingMessages()
 {
+  Serial.println("Get Waiting Message Count: " + modem.getWaitingMessageCount()); 
   if (modem.getWaitingMessageCount() > 0)
   {
     Serial.println("Waiting messages available.  Let's try to read them.");
@@ -316,4 +345,13 @@ String externalTemperature()
   
 }
 
+void manageHeaters(double currentTemp) {
+  if (currentTemp < 0) {
+    double p = min(1, max(0, currentTemp / -10));
+    Serial.print("p=");
+    Serial.print(p);
+    Serial.println();
+    analogWrite(heaterControlPin, 255. * p);
+  }
+}
 
