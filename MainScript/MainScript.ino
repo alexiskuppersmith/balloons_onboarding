@@ -16,14 +16,15 @@
 
 
 //Log
-//File flightLog;
+File flightLog;
 
 
 #define BMP_SCK 13
 #define BMP_MISO 12
 #define BMP_MOSI 11 
 #define BMP_CS 10
-#define fadePin 3
+#define fadePin 21
+#define fadePin2 22
 
 //Adafruit_BMP280 bmp; // I2C commented out, using SPI.
 Adafruit_BMP280 bmp(BMP_CS); // hardware SPI
@@ -49,6 +50,8 @@ Adafruit_MAX31855 thermocouple(MAXCLK, MAXCS, MAXDO);
 // on a given CS pin.
 //#define MAXCS   10
 //Adafruit_MAX31855 thermocouple(MAXCS);
+uint8_t buffer[200] = 
+{ 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 };
 
 
 //orientation sensor
@@ -103,7 +106,11 @@ void setup(void)
 
   // Begin satellite modem operation
   Serial.println("Starting modem..."); //if it fails to start, we do some print stuff 
-  modem.begin();  
+   if (modem.begin() != ISBD_SUCCESS)
+  {
+    Serial.println("Couldn't begin modem operations.");
+    exit(0);
+  } 
   Serial.println("After modem.begin()");
   modem.getSignalQuality(signalQuality);
   Serial.println("After getSignalQuality"); 
@@ -111,27 +118,17 @@ void setup(void)
   Serial.print("On a scale of 0 to 5, signal quality is currently ");
   Serial.print(signalQuality);
   Serial.println(".");
-  File dataFile; 
+  pinMode(22, OUTPUT);
 }
+static bool messageSent = false; 
 
 
 void loop() 
 {
-  dataFile = SD.open("datalog.txt", FILE_WRITE);
-  Serial.println("Temp = 10C...");
-  manageHeaters(10);
-  delay(5000);
-  Serial.println("Temp = 0C...");
-  manageHeaters(0);
-  delay(5000);
-  Serial.println("Temp = -5C...");
-  manageHeaters(-5);
-  delay(5000);
-  Serial.println("Temp = -15C...");
-  manageHeaters(-15);
-  delay(5000);
-  Serial.println("IN THE LOOP"); 
+  flightLog = SD.open("datalog.txt", FILE_WRITE);
+   
   String logString;
+  Serial.println(logString); 
   gps.encode(*gpsStream++);
   
   double altitude = getAltitude();
@@ -139,29 +136,58 @@ void loop()
 
   //TODO: log the logString to SD card
   
-  //cut balloon
+  //cut egg
   if(altitude >= 4334){
-    for(int i = 0; i < 360; i++){ //convert 0-360 angle to radian (needed for sin function) 
-      float rad = DEG_TO_RAD * i; //calculate sin of angle as number between 0 and 255 
-      int sinOut = constrain((sin(rad) * 128) + 128, 0, 255); 
-      analogWrite(fadePin, sinOut); 
-      delay(15); 
+    digitalWrite(22, HIGH); 
+    
     }
-  }
-  // Example: Print the firmware revision
-  Serial.println("Should print things"); 
-  printIncomingMessages(); 
-  Serial.println(logString); 
-  modem.sendSBDText(logString.c_str()); //this is where we should print the final string
-     if (dataFile) {
-    dataFile.println(logString);
-    dataFile.close();
+  
+  int err;
+  
+  // Read/Write the first time or if there are any remaining messages
+  if (!messageSent || modem.getWaitingMessageCount() > 0)
+  {
+    size_t bufferSize = sizeof(buffer);
+
+    // First time through send+receive; subsequent loops receive only
+      err = modem.sendReceiveSBDText(logString.c_str(), buffer, bufferSize);
+      
+    if (err != ISBD_SUCCESS)
+    {
+      Serial.print("sendReceiveSBD* failed: error ");
+      Serial.println(err);
+    }
+    else // success!
+    {
+      messageSent = true;
+      Serial.print("Inbound buffer size is ");
+      Serial.println(bufferSize);
+      for (int i=0; i<bufferSize; ++i)
+      {
+        Serial.print(buffer[i]);
+        if (isprint(buffer[i]))
+        {
+          Serial.print("(");
+          Serial.write(buffer[i]);
+          Serial.print(")");
+        }
+        Serial.print(" ");
+      }
+      Serial.println();
+      Serial.print("Messages remaining to be retrieved: ");
+      Serial.println(modem.getWaitingMessageCount());
+    }
+  } 
+     if(flightLog) {
+    flightLog.println(logString);
+    flightLog.close();
   } 
   delay(5000);
 }
 
 //returns a string in the form "temp, pressure"
 String getTempAndPressure(){
+    manageHeaters(bmp.readTemperature());
   return "Temperature: " + String(bmp.readTemperature()) + " *C, " + "Pressure: "+String(bmp.readPressure()) + " Pa";
 }
 
@@ -170,9 +196,7 @@ double getAltitude(){
   return bmp.readAltitude(1013.25);
 }
 
-void logToSD() {
 
-}
 
 //=============BNO 055======================
 
@@ -274,36 +298,6 @@ String getLatLong()
   }
 }
 
-void printIncomingMessages()
-{
-  Serial.println("Get Waiting Message Count: " + modem.getWaitingMessageCount()); 
-  if (modem.getWaitingMessageCount() > 0)
-  {
-    Serial.println("Waiting messages available.  Let's try to read them.");
-    uint8_t buffer[200];
-    size_t bufferSize = sizeof(buffer);
-    modem.sendReceiveSBDText(NULL, buffer, bufferSize);
-    Serial.println("Message received!");
-    Serial.print("Inbound message size is ");
-    Serial.println(bufferSize);
-    for (int i=0; i<(int)bufferSize; ++i)
-    {
-      Serial.print(buffer[i], HEX);
-      if (isprint(buffer[i]))
-      {
-        Serial.print("(");
-        Serial.write(buffer[i]);
-        Serial.print(")");
-      }
-      Serial.print(" ");
-    }
-    Serial.println();
-    Serial.print("Messages remaining to be retrieved: ");
-    Serial.println(modem.getWaitingMessageCount());
-  }
-}
-
-
 void sendUBX(uint8_t* MSG, uint8_t len) {
   for(int i = 0; i < len; i++) {
     Serial1.write(MSG[i]);
@@ -313,19 +307,6 @@ void sendUBX(uint8_t* MSG, uint8_t len) {
 }
 
 
-
-
-#if DIAGNOSTICS
-void ISBDConsoleCallback(IridiumSBD *device, char c)
-{
-  Serial.write(c);
-}
-
-void ISBDDiagsCallback(IridiumSBD *device, char c)
-{
-  Serial.write(c);
-}
-#endif
 
 String externalTemperature() 
 {
@@ -355,3 +336,17 @@ void manageHeaters(double currentTemp) {
   }
 }
 
+
+
+
+#if DIAGNOSTICS
+void ISBDConsoleCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+
+void ISBDDiagsCallback(IridiumSBD *device, char c)
+{
+  Serial.write(c);
+}
+#endif
